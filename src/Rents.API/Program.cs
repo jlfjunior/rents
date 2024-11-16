@@ -18,6 +18,7 @@ if (app.Environment.IsDevelopment())
 
 var vehicles = new List<Vehicle>();
 var drivers = new List<Driver>();
+var locations = new List<Location>();
 
 app.MapGet("/vehicles", () =>
 {
@@ -84,6 +85,44 @@ app.MapPost("/drivers", (string cnpj, string name) =>
     return driver;
 })
 .WithName("Add Driver")
+.WithOpenApi();
+
+app.MapGet("/locations", () =>
+{
+    return locations;
+})
+.WithName("Get Locations")
+.WithOpenApi();
+
+app.MapPost("/locations", (Guid driverId, Guid vehicleId, int plan) =>
+{
+    var location = new Location
+    {
+        Id = Guid.NewGuid(),
+        Plan = (Plan)plan,
+        DriverId = driverId,
+        VehicleId = vehicleId,
+        CreatedAt = DateTime.Now,
+        StartDate = DateOnly.FromDateTime(DateTime.Now.AddDays(1)),
+        ExpectedDeliveryDate = DateOnly.FromDateTime(DateTime.Now).AddDays(1 + plan)
+    };
+
+    locations.Add(location);
+
+    return location;
+})
+.WithName("Add Location")
+.WithOpenApi();
+
+app.MapPost("/locations/{id}/finish", (Guid id, DateOnly date) =>
+{
+    var location = locations.First(x => x.Id == id);
+
+    location.FinishDate = date;
+
+    return location;
+})
+.WithName("Finish Location")
 .WithOpenApi();
 
 app.Run();
