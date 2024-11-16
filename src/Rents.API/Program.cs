@@ -16,11 +16,52 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+var vehicles = new List<Vehicle>();
+
 app.MapGet("/vehicles", () =>
 {
-    return Enumerable.Empty<Vehicle>();
+    return vehicles;
 })
-.WithName("GetVehicles")
+.WithName("Get Vehicles")
+.WithOpenApi();
+
+app.MapPost("/vehicles", (string model, int year, string plate) =>
+{
+    var vehicle = new Vehicle
+    {
+        Id = Guid.NewGuid(),
+        Model = model,
+        Year = year,
+        Plate = plate
+    };
+
+    vehicles.Add(vehicle);
+
+    return vehicle;
+})
+.WithName("Add Vehicles")
+.WithOpenApi();
+
+app.MapPost("/vehicles/{id}", (Guid id, string plate) =>
+{
+    var vehicle = vehicles.First(x => x.Id == id);
+
+    vehicle.Plate = plate;
+    
+    return vehicle;
+})
+.WithName("Update Vehicle Plate")
+.WithOpenApi();
+
+app.MapDelete("/vehicles/{id}", (Guid id) =>
+{
+    var vehicle = vehicles.First(x => x.Id == id);
+
+    vehicles.Remove(vehicle);
+    
+    return vehicle;
+})
+.WithName("Delete Vehicle")
 .WithOpenApi();
 
 app.Run();
