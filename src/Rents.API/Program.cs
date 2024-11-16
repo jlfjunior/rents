@@ -1,10 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using Rents.API.Domain;
+using Rents.API.Features.Drivers;
+using Rents.API.Features.Locations;
+using Rents.API.Features.Vehicles;
 using Rents.API.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IDriverService, DriverService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -20,118 +26,81 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/vehicles", async (RentsContext context) =>
 {
-    return await context.Vehicles.ToListAsync();
+    var vehicles = await context.Vehicles.ToListAsync();
+    
+    return Results.Ok(vehicles);
 })
 .WithName("Get Vehicles")
 .WithOpenApi();
 
-app.MapPost("/vehicles", async (string model, int year, string plate, RentsContext context) =>
+app.MapPost("/vehicles", async (string model, int year, string plate, IVehicleService service) =>
 {
-    var vehicle = new Vehicle
-    {
-        Id = Guid.NewGuid(),
-        Model = model,
-        Year = year,
-        Plate = plate
-    };
+    await service.AddAsync(model, year, plate);
 
-    context.Vehicles.Add(vehicle);
-    await context.SaveChangesAsync();
-
-    return vehicle;
+    return Results.Ok();
 })
 .WithName("Add Vehicles")
 .WithOpenApi();
 
-app.MapPost("/vehicles/{id}", async (Guid id, string plate, RentsContext context) =>
+app.MapPost("/vehicles/{id}", async (Guid id, string plate, IVehicleService service) =>
 {
-    var vehicle = context.Vehicles.First(x => x.Id == id);
+    await service.UpdateAsync(id, plate);
 
-    vehicle.Plate = plate;
-    
-    await context.SaveChangesAsync();
-
-    return vehicle;
+    return Results.Ok(id);
 })
 .WithName("Update Vehicle Plate")
 .WithOpenApi();
 
-app.MapDelete("/vehicles/{id}", async (Guid id, RentsContext context) =>
+app.MapDelete("/vehicles/{id}", async (Guid id, IVehicleService service) =>
 {
-    var vehicle = context.Vehicles.First(x => x.Id == id);
+    await service.DeleteAsync(id);
 
-    context.Vehicles.Remove(vehicle);
-    
-    await context.SaveChangesAsync();
-
-    return vehicle;
+    return Results.Ok(id);
 })
 .WithName("Delete Vehicle")
 .WithOpenApi();
 
 app.MapGet("/drivers", async (RentsContext context) =>
 {
-    return await context.Drivers.ToListAsync();
+    var drivers = await context.Drivers.ToListAsync();
+
+    return Results.Ok(drivers);
 })
 .WithName("Get Drivers")
 .WithOpenApi();
 
-app.MapPost("/drivers", async (string cnpj, string name, RentsContext context) =>
+app.MapPost("/drivers", async (string cnpj, string name, IDriverService service) =>
 {
-    var driver = new Driver
-    {
-        Id = Guid.NewGuid(),
-        Cnpj = cnpj,
-        Name = name
-    };
+    await service.AddAsync(cnpj, name);
 
-    context.Drivers.Add(driver);
-
-    await context.SaveChangesAsync();
-
-    return driver;
+    return Results.Ok();
 })
 .WithName("Add Driver")
 .WithOpenApi();
 
 app.MapGet("/locations", async (RentsContext context) =>
 {
-    return await context.Locations.ToListAsync();
+    var locations = await context.Locations.ToListAsync();
+
+    return Results.Ok(locations);
 })
 .WithName("Get Locations")
 .WithOpenApi();
 
-app.MapPost("/locations", async (Guid driverId, Guid vehicleId, int plan, RentsContext context) =>
+app.MapPost("/locations", async (Guid driverId, Guid vehicleId, int plan, ILocationService service) =>
 {
-    var location = new Location
-    {
-        Id = Guid.NewGuid(),
-        Plan = (Plan)plan,
-        DriverId = driverId,
-        VehicleId = vehicleId,
-        CreatedAt = DateTime.Now,
-        StartDate = DateOnly.FromDateTime(DateTime.Now.AddDays(1)),
-        ExpectedDeliveryDate = DateOnly.FromDateTime(DateTime.Now).AddDays(1 + plan)
-    };
+    await service.AddAsync(driverId, vehicleId, plan);
 
-    context.Locations.Add(location);
-
-    await context.SaveChangesAsync();
-    
-    return location;
+    return Results.Ok();
 })
 .WithName("Add Location")
 .WithOpenApi();
 
-app.MapPost("/locations/{id}/finish", async (Guid id, DateOnly date, RentsContext context) =>
+app.MapPost("/locations/{id}/finish", async (Guid id, DateOnly date, ILocationService service) =>
 {
-    var location = context.Locations.First(x => x.Id == id);
-
-    location.FinishDate = date;
-
-    await context.SaveChangesAsync();
-
-    return location;
+    await service.FinishAsync(id, date);
+    
+    return Results.Ok(id);
 })
 .WithName("Finish Location")
 .WithOpenApi();
