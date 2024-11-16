@@ -17,6 +17,7 @@ if (app.Environment.IsDevelopment())
 }
 
 var vehicles = new List<Vehicle>();
+var drivers = new List<Driver>();
 
 app.MapGet("/vehicles", () =>
 {
@@ -62,6 +63,27 @@ app.MapDelete("/vehicles/{id}", (Guid id) =>
     return vehicle;
 })
 .WithName("Delete Vehicle")
+.WithOpenApi();
+
+app.MapGet("/drivers", () =>
+{
+    return drivers;
+})
+.WithName("Get Drivers")
+.WithOpenApi();
+
+app.MapPost("/drivers", (string cnpj, string name) =>
+{
+    var driver = new Driver
+    {
+        Id = Guid.NewGuid(),
+        Cnpj = cnpj,
+        Name = name
+    };
+
+    return driver;
+})
+.WithName("Add Driver")
 .WithOpenApi();
 
 app.Run();
